@@ -1,5 +1,5 @@
 from .detector3d_template import Detector3DTemplate
-
+from pprint import pprint
 
 class PVRCNN(Detector3DTemplate):
     def __init__(self, model_cfg, num_class, dataset):
@@ -8,7 +8,12 @@ class PVRCNN(Detector3DTemplate):
 
     def forward(self, batch_dict):
         for cur_module in self.module_list:
+            # print("module #################################################################")
             batch_dict = cur_module(batch_dict)
+            # pprint(cur_module)
+            # print("\nbatch_dict: \n")
+            # pprint(batch_dict)
+            # print("#################################################################\n\n")
 
         if self.training:
             loss, tb_dict, disp_dict = self.get_training_loss()

@@ -1,0 +1,1 @@
+python demo.py --cfg_file cfgs/nuscenes_models/cbgs_voxel0075_voxelnext.yaml --ckpt ../checkpoints/voxelnext_nuscenes_kernel1.pth --data_path

@@ -1,0 +1,8 @@
+ 2002  pip3 install --user spconv-cu117
+ 2006  git clone https://github.com/open-mmlab/OpenPCDet.git
+ 2010  cd OpenPCDet/
+ 2013  python3 -m pip install --editable .
+ 2014  pip install --user open3d
+ 2019  pip install -U numpy==1.23
+ 2021  pip install -U kornia
+ 2024  pip install typing-extensions --upgrade

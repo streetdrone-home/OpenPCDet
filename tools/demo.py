@@ -18,6 +18,9 @@ from pcdet.config import cfg, cfg_from_yaml_file
 from pcdet.datasets import DatasetTemplate
 from pcdet.models import build_network, load_data_to_gpu
 from pcdet.utils import common_utils
+import sys
+from torchsummary import summary
+from pprint import pprint
 
 
 class DemoDataset(DatasetTemplate):
@@ -46,6 +49,12 @@ class DemoDataset(DatasetTemplate):
     def __getitem__(self, index):
         if self.ext == '.bin':
             points = np.fromfile(self.sample_file_list[index], dtype=np.float32).reshape(-1, 4)
+            # points = points[:, :4]
+            # points[:,4] = 0
+            # np.set_printoptions(threshold=sys.maxsize)
+            # print(points)
+            points = np.c_[points, np.zeros(points.shape[0])]
+            print("points shape: ", points.shape)
         elif self.ext == '.npy':
             points = np.load(self.sample_file_list[index])
         else:
@@ -88,14 +97,51 @@ def main():
 
     model = build_network(model_cfg=cfg.MODEL, num_class=len(cfg.CLASS_NAMES), dataset=demo_dataset)
     model.load_params_from_file(filename=args.ckpt, logger=logger, to_cpu=True)
+    # exit()
     model.cuda()
     model.eval()
     with torch.no_grad():
         for idx, data_dict in enumerate(demo_dataset):
             logger.info(f'Visualized sample index: \t{idx + 1}')
             data_dict = demo_dataset.collate_batch([data_dict])
+            pprint(data_dict)
             load_data_to_gpu(data_dict)
             pred_dicts, _ = model.forward(data_dict)
+            # voxels, voxel_coords, voxel_num_points
+            # pred_dicts = model.forward(
+            #     data_dict['voxels'],
+            #     data_dict['voxel_coords'],
+            #     data_dict['voxel_num_points'],
+            #     data_dict['batch_size'])
+
+            # print('\n\nfinal box dicts: \n', pred_dicts)
+            # exit()
+
+            # Export the model
+            # torch.onnx.export(model,               # model being run
+            #                   (data_dict['voxels'],
+            #                    data_dict['voxel_coords'],
+            #                    data_dict['voxel_num_points'],
+            #                    data_dict['batch_size']),                         # model input (or a tuple for multiple inputs)
+            #                   "voxelnext.onnx",   # where to save the model (can be a file or file-like object)
+            #                   export_params=True,        # store the trained parameter weights inside the model file
+            #                   opset_version=14,          # the ONNX version to export the model to
+            #                   do_constant_folding=True,  # whether to execute constant folding for optimization
+            #                   input_names = ['voxels', 'voxel_coords', 'voxel_num_points', 'batch_size'],   # the model's input names
+            #                   output_names = ['output'])
+            # print(pred_dicts)
+            
+            # torch.onnx.export(model.reader,               # model being run
+            #                   data_dict,                         # model input (or a tuple for multiple inputs)
+            #                   "./voxelnext.onnx",   # where to save the model (can be a file or file-like object)
+            #                   export_params=True,        # store the trained parameter weights inside the model file
+            #                   opset_version=11,          # the ONNX version to export the model to
+            #                   do_constant_folding=True,  # whether to execute constant folding for optimization
+            #                   keep_initializers_as_inputs=True,
+            #                   input_names = ['voxels', 'voxel_coords', 'voxel_num_points', 'batch_size'],   # the model's input names
+            #                   output_names = ['output'])
+
+            # print(summary(model, data_dict))
 
             V.draw_scenes(
                 points=data_dict['points'][:, 1:], ref_boxes=pred_dicts[0]['pred_boxes'],
