@@ -13,6 +13,14 @@ box_colormap = [
     [0, 1, 0],
     [0, 1, 1],
     [1, 1, 0],
+    [1, 1, 1],
+    [0, 1, 0],
+    [0, 1, 1],
+    [1, 1, 0],
+    [1, 1, 1],
+    [0, 1, 0],
+    [0, 1, 1],
+    [1, 1, 0],
 ]
 
 
@@ -44,7 +52,9 @@ def draw_scenes(points, gt_boxes=None, ref_boxes=None, ref_labels=None, ref_scor
         ref_boxes = ref_boxes.cpu().numpy()
 
     vis = open3d.visualization.Visualizer()
+    print('created window')
     vis.create_window()
+    print('created window')
 
     vis.get_render_option().point_size = 1.0
     vis.get_render_option().background_color = np.zeros(3)

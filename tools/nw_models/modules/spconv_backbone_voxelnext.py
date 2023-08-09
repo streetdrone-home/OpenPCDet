@@ -200,6 +200,7 @@ class VoxelResBackBone8xVoxelNeXt(nn.Module):
     )
     x = self.conv_input(input_sp_tensor)
 
+    # TODO: remove intermediates
     x_conv1 = self.conv1(x)
     x_conv2 = self.conv2(x_conv1)
     x_conv3 = self.conv3(x_conv2)
@@ -218,19 +219,4 @@ class VoxelResBackBone8xVoxelNeXt(nn.Module):
     out = self.conv_out(out)
     out = self.shared_conv(out)
 
-    return {
-        'encoded_spconv_tensor': out,
-        'encoded_spconv_tensor_stride': 8,
-        'multi_scale_3d_features': {
-            'x_conv1': x_conv1,
-            'x_conv2': x_conv2,
-            'x_conv3': x_conv3,
-            'x_conv4': x_conv4,
-        },
-        'multi_scale_3d_strides': {
-            'x_conv1': 1,
-            'x_conv2': 2,
-            'x_conv3': 4,
-            'x_conv4': 8,
-        }
-    }
+    return out  # encoded_spconv_tensor
