@@ -7,6 +7,7 @@ import tqdm
 
 from pcdet.models import load_data_to_gpu
 from pcdet.utils import common_utils
+from pprint import pprint
 
 
 def statistics_info(cfg, ret_dict, metric, disp_dict):
@@ -55,20 +56,41 @@ def eval_one_epoch(cfg, args, model, dataloader, epoch_id, logger, dist_test=Fal
     if cfg.LOCAL_RANK == 0:
         progress_bar = tqdm.tqdm(total=len(dataloader), leave=True, desc='eval', dynamic_ncols=True)
     start_time = time.time()
-    for i, batch_dict in enumerate(dataloader):
+    for i, batch_dict in enumerate(dataloader):        
         load_data_to_gpu(batch_dict)
 
         if getattr(args, 'infer_time', False):
             start_time = time.time()
+        
+        print("batch size: ", batch_dict['batch_size'])
+        print("v size: ", batch_dict['voxels'].size())
+        print("v num pts: ", batch_dict['voxel_num_points'].size())
+        print("v coords: ", batch_dict['voxel_coords'].size())
+
+        print("voxels\n", batch_dict['voxels'])
+        print("voxel num points\n", batch_dict['voxel_num_points'])
+        print("voxel coords\n", batch_dict['voxel_coords'])
+        # exit()
 
         with torch.no_grad():
-            pred_dicts, ret_dict = model(batch_dict)
+            # pred_dicts, ret_dict = model(batch_dict)
+            pred_dicts, ret_dict = model(batch_dict['batch_size'],
+                                         batch_dict['voxels'], 
+                                         batch_dict['voxel_num_points'], 
+                                         batch_dict['voxel_coords'])
+
+        print("########## pred dicts")
+        pprint(pred_dicts)
+        print("########## ret dict")
+        pprint(ret_dict)
+        exit()
 
         disp_dict = {}
 
         if getattr(args, 'infer_time', False):
             inference_time = time.time() - start_time
             infer_time_meter.update(inference_time * 1000)
+            print('inference time: ', inference_time)
             # use ms to measure inference time
             disp_dict['infer_time'] = f'{infer_time_meter.val:.2f}({infer_time_meter.avg:.2f})'
 
