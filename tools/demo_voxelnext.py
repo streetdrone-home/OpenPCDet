@@ -55,10 +55,10 @@ np.save('points.npy', points)
 start_time = time.time()
 # no need of point feature encoding
 voxels, coordinates, num_points = data_p.preprocess(points)
+# pad coordinates for single inference
 coordinates = torch_f.pad(coordinates, (1, 0), mode='constant', value=0)
 end_time = time.time()
 print("process time: ", end_time - start_time)
-# pad coordinates for single inference
 
 print('v size: ', voxels.size())
 print('v num pts: ', num_points.size())
@@ -83,12 +83,4 @@ with torch.no_grad():
 
 pprint(pred_dicts)
 
-
-out_dict = {}
-for key, value in pred_dicts[0].items():
-  print(key)
-  print(type(value))
-  if not isinstance(value, list):
-    out_dict[key] = value.cpu()
-
-torch.save(out_dict, 'pred_dicts1.pt')
+torch.save(pred_dicts[0], 'pred_dicts1.pt')
