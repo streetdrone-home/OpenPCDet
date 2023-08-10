@@ -6,70 +6,6 @@ from spconv.pytorch.utils import PointToVoxel
 import torch
 
 
-class PointFeatureEncoder:
-  def __init__(self, config, point_cloud_range=None):
-    super().__init__()
-    self.point_encoding_config = config
-    assert list(self.point_encoding_config.src_feature_list[0:3]) == ['x', 'y', 'z']
-    self.used_feature_list = self.point_encoding_config.used_feature_list
-    self.src_feature_list = self.point_encoding_config.src_feature_list
-    self.point_cloud_range = point_cloud_range
-
-  @property
-  def num_point_features(self):
-    return getattr(self, self.point_encoding_config.encoding_type)(points=None)
-
-  def forward(self, points):
-    """
-    Args:
-        data_dict:
-            points: (N, 3 + C_in)
-            ...
-    Returns:
-        data_dict:
-            points: (N, 3 + C_out),
-            use_lead_xyz: whether to use xyz as point-wise features
-            ...
-    """
-    points, use_lead_xyz = getattr(self, self.point_encoding_config.encoding_type)(
-        points
-    )
-
-    if self.point_encoding_config.get(
-            'filter_sweeps', False) and 'timestamp' in self.src_feature_list:
-      max_sweeps = self.point_encoding_config.max_sweeps
-      idx = self.src_feature_list.index('timestamp')
-      dt = np.round(points[:, idx], 2)
-      max_dt = sorted(np.unique(dt))[min(len(np.unique(dt)) - 1, max_sweeps - 1)]
-      points = points[dt <= max_dt]
-
-    return points, use_lead_xyz
-
-  def absolute_coordinates_encoding(self, points=None):
-    """
-    Args:
-        points: (N, 3 + C_in)
-    Returns:
-        point_features,
-        bool: use_lead_xyz
-        ...
-    """
-    if points is None:
-      num_output_features = len(self.used_feature_list)
-      return num_output_features
-
-    assert points.shape[-1] == len(self.src_feature_list)
-    point_feature_list = [points[:, 0:3]]
-    for x in self.used_feature_list:
-      if x in ['x', 'y', 'z']:
-        continue
-      idx = self.src_feature_list.index(x)
-      point_feature_list.append(points[:, idx:idx + 1])
-    point_features = np.concatenate(point_feature_list, axis=1)
-
-    return point_features, True
-
-
 class VoxelGenerator:
   def __init__(
           self, vsize_xyz, coors_range_xyz, num_point_features, max_num_points_per_voxel,
@@ -147,11 +83,8 @@ class DataProcessor:
 
     return points_yflip, points_xflip, points_xyflip
 
-  def transform_points_to_voxels(self, points, use_lead_xyz=False):
+  def transform_points_to_voxels(self, points):
     voxels, coordinates, num_points = self.voxel_generator.generate(points)
-
-    if not use_lead_xyz:
-      voxels = voxels[..., 3:]  # remove xyz in voxels(N, 3)
 
     if self.is_double_flip:
       voxels_list, voxel_coords_list, voxel_num_points_list = [voxels], [coordinates], [num_points]
@@ -161,9 +94,6 @@ class DataProcessor:
       for i, key in enumerate(keys):
         voxel_output = self.voxel_generator.generate(points_list[i])
         voxels, coordinates, num_points = voxel_output
-
-        if not use_lead_xyz:
-          voxels = voxels[..., 3:]
         voxels_list.append(voxels)
         voxel_coords_list.append(coordinates)
         voxel_num_points_list.append(num_points)
@@ -172,10 +102,9 @@ class DataProcessor:
 
     return voxels, coordinates, num_points
 
-  def preprocess(self, points, use_lead_xyz):
+  def preprocess(self, points):
     return self.transform_points_to_voxels(
       self.shuffle_points(
         self.mask_points_and_boxes_outside_range(points)
-      ),
-      use_lead_xyz
+      )
     )
