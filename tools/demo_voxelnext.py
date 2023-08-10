@@ -54,6 +54,7 @@ np.save('points.npy', points)
 
 start_time = time.time()
 # no need of point feature encoding
+points = torch.from_numpy(points).to(device=torch.device('cuda:0'))
 voxels, coordinates, num_points = data_p.preprocess(points)
 # pad coordinates for single inference
 coordinates = torch_f.pad(coordinates, (1, 0), mode='constant', value=0)
