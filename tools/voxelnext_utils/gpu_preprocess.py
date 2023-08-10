@@ -6,26 +6,10 @@ from spconv.pytorch.utils import PointToVoxel
 import torch
 
 
-class VoxelGenerator:
-  def __init__(
-          self, vsize_xyz, coors_range_xyz, num_point_features, max_num_points_per_voxel,
-          max_num_voxels):
-    self._voxel_generator = PointToVoxel(
-      vsize_xyz=vsize_xyz,
-      coors_range_xyz=coors_range_xyz,
-      num_point_features=num_point_features,
-      max_num_voxels=max_num_voxels,
-      max_num_points_per_voxel=max_num_points_per_voxel,
-      device=torch.device('cuda:0')
-    )
-
-  def generate(self, points):
-    pts = torch.from_numpy(points).to(self._voxel_generator.device)
-    return self._voxel_generator(pts)
-
-
 class DataProcessor:
-  def __init__(self, processor_configs, point_cloud_range, training, num_point_features):
+  def __init__(
+          self, processor_configs, point_cloud_range, training, num_point_features,
+          device=torch.device('cuda:0')):
     self.point_cloud_range = point_cloud_range
     self.training = training
     self.num_point_features = num_point_features
@@ -46,12 +30,13 @@ class DataProcessor:
         max_num_voxels = dp_cfg.MAX_NUMBER_OF_VOXELS[self.mode]
         self.is_double_flip = dp_cfg.get('DOUBLE_FLIP', False)
 
-        self.voxel_generator = VoxelGenerator(
+        self.voxel_generator = PointToVoxel(
           vsize_xyz=self.voxel_size,
           coors_range_xyz=self.point_cloud_range,
           num_point_features=self.num_point_features,
-          max_num_points_per_voxel=max_pts_per_voxel,
           max_num_voxels=max_num_voxels,
+          max_num_points_per_voxel=max_pts_per_voxel,
+          device=device
         )
       else:
         raise ValueError('unimplemented processor function')
@@ -84,7 +69,7 @@ class DataProcessor:
     return points_yflip, points_xflip, points_xyflip
 
   def transform_points_to_voxels(self, points):
-    voxels, coordinates, num_points = self.voxel_generator.generate(points)
+    voxels, coordinates, num_points = self.voxel_generator(points)
 
     if self.is_double_flip:
       voxels_list, voxel_coords_list, voxel_num_points_list = [voxels], [coordinates], [num_points]
@@ -92,7 +77,7 @@ class DataProcessor:
       points_list = [points_yflip, points_xflip, points_xyflip]
       keys = ['yflip', 'xflip', 'xyflip']
       for i, key in enumerate(keys):
-        voxel_output = self.voxel_generator.generate(points_list[i])
+        voxel_output = self.voxel_generator(points_list[i])
         voxels, coordinates, num_points = voxel_output
         voxels_list.append(voxels)
         voxel_coords_list.append(coordinates)
