@@ -11,7 +11,7 @@ import torch
 import datetime
 import time
 import os
-from voxelnext_utils.gpu_preprocess import PointFeatureEncoder, DataProcessor
+from voxelnext_utils.gpu_preprocess import DataProcessor
 from voxelnext_utils.file_io import get_lidar_with_sweeps
 
 from torch.nn import functional as torch_f
@@ -30,8 +30,7 @@ cfg_file = "/home/cuda_pp/OpenPCDet/tools/cfgs/nuscenes_models/cbgs_voxel0075_vo
 
 with open(info_path, 'rb') as f:
   infos = pickle.load(f)
-  info = infos[5]
-  # pprint(infos[1])
+  info = infos[21]
 
 cfg_from_yaml_file(cfg_file, cfg)
 cfg.TAG = Path(cfg_file).stem
@@ -46,20 +45,16 @@ os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
 
 print("############# DATASET CONFIG ###################\n", dataset_cfg)
 
-point_feature_encoder = PointFeatureEncoder(
-    dataset_cfg.POINT_FEATURE_ENCODING,
-    point_cloud_range=dataset_cfg.POINT_CLOUD_RANGE
-)
 point_cloud_range = np.array(dataset_cfg.POINT_CLOUD_RANGE, dtype=np.float32)
-num_point_features = point_feature_encoder.num_point_features
+num_point_features = len(dataset_cfg.POINT_FEATURE_ENCODING.used_feature_list)
 data_p = DataProcessor(dataset_cfg.DATA_PROCESSOR, point_cloud_range, False, num_point_features)
 
 points = get_lidar_with_sweeps(root_path, info, max_sweeps=dataset_cfg.MAX_SWEEPS)
 np.save('points.npy', points)
 
 start_time = time.time()
-points, use_lead_xyz = point_feature_encoder.forward(points)
-voxels, coordinates, num_points = data_p.preprocess(points, use_lead_xyz)
+# no need of point feature encoding
+voxels, coordinates, num_points = data_p.preprocess(points)
 coordinates = torch_f.pad(coordinates, (1, 0), mode='constant', value=0)
 end_time = time.time()
 print("process time: ", end_time - start_time)
@@ -96,4 +91,4 @@ for key, value in pred_dicts[0].items():
   if not isinstance(value, list):
     out_dict[key] = value.cpu()
 
-# torch.save(out_dict, 'pred_dicts1.pt')
+torch.save(out_dict, 'pred_dicts1.pt')
